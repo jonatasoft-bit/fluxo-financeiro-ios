@@ -25,6 +25,12 @@ body {
   color: var(--ink);
 }
 
+body.locked .app-shell {
+  filter: blur(14px);
+  pointer-events: none;
+  user-select: none;
+}
+
 button,
 input {
   font: inherit;
@@ -46,6 +52,11 @@ button {
   justify-content: space-between;
   gap: 16px;
   padding: 8px 0 18px;
+}
+
+.top-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .eyebrow {
@@ -81,6 +92,60 @@ h2 {
   font-size: 1.6rem;
   line-height: 1;
   box-shadow: var(--shadow);
+}
+
+.lock-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(247, 245, 239, 0.92);
+  backdrop-filter: blur(16px);
+}
+
+body:not(.locked) .lock-screen {
+  display: none;
+}
+
+.lock-card {
+  display: grid;
+  gap: 14px;
+  width: min(100%, 420px);
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.lock-card h1 {
+  font-size: 1.55rem;
+}
+
+.lock-copy,
+.lock-note,
+.lock-warning {
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.lock-warning {
+  min-height: 20px;
+  color: var(--warning);
+  font-weight: 750;
+}
+
+.lock-actions {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+}
+
+.full-button {
+  width: 100%;
 }
 
 .summary-grid {
@@ -358,7 +423,8 @@ button:focus-visible {
   }
 
   .form-row,
-  .actions {
+  .actions,
+  .lock-actions {
     grid-template-columns: 1fr;
   }
 

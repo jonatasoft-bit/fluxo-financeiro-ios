@@ -11,16 +11,41 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
   </head>
-  <body>
+  <body class="locked">
+    <section class="lock-screen" id="lockScreen" aria-label="Bloqueio de seguranca">
+      <div class="lock-card">
+        <p class="eyebrow">Seguranca</p>
+        <h1 id="lockTitle">Proteger Fluxo</h1>
+        <p class="lock-copy" id="lockCopy">Crie um PIN para impedir que outras pessoas vejam seus valores neste aparelho.</p>
+
+        <label>
+          PIN
+          <input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="6 numeros ou mais">
+        </label>
+
+        <div class="lock-actions">
+          <button class="secondary-button" id="generatePinButton" type="button">Gerar PIN</button>
+          <button class="primary-button" id="unlockButton" type="button">Continuar</button>
+        </div>
+
+        <button class="secondary-button full-button" id="biometricButton" type="button" hidden>Usar Face ID/Touch ID</button>
+
+        <p class="lock-warning" id="lockMessage" role="status"></p>
+        <p class="lock-note">O app e publico, mas seus lancamentos ficam salvos localmente no seu navegador.</p>
+      </div>
+    </section>
+
     <main class="app-shell">
       <header class="topbar">
         <div>
           <p class="eyebrow">Financas</p>
           <h1>Fluxo</h1>
         </div>
-        <button class="icon-button" id="seedButton" type="button" aria-label="Adicionar exemplo" title="Adicionar exemplo">
-          <span aria-hidden="true">+</span>
-        </button>
+        <div class="top-actions">
+          <button class="icon-button" id="lockButton" type="button" aria-label="Travar app" title="Travar app">
+            <span aria-hidden="true">#</span>
+          </button>
+        </div>
       </header>
 
       <section class="summary-grid" aria-label="Resumo financeiro">

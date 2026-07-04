@@ -1,7 +1,18 @@
 const storageKey = "fluxo-financeiro-entradas-v1";
+const authKey = "fluxo-financeiro-auth-v1";
+const sessionKey = "fluxo-financeiro-unlocked";
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+const lockScreen = document.querySelector("#lockScreen");
+const lockTitle = document.querySelector("#lockTitle");
+const lockCopy = document.querySelector("#lockCopy");
+const pinInput = document.querySelector("#pinInput");
+const generatePinButton = document.querySelector("#generatePinButton");
+const unlockButton = document.querySelector("#unlockButton");
+const biometricButton = document.querySelector("#biometricButton");
+const lockMessage = document.querySelector("#lockMessage");
+const lockButton = document.querySelector("#lockButton");
 const form = document.querySelector("#entryForm");
 const entryId = document.querySelector("#entryId");
 const description = document.querySelector("#description");
@@ -14,14 +25,44 @@ const template = document.querySelector("#entryTemplate");
 const cancelEdit = document.querySelector("#cancelEdit");
 const editingBadge = document.querySelector("#editingBadge");
 const exportButton = document.querySelector("#exportButton");
-const seedButton = document.querySelector("#seedButton");
 const filterButtons = [...document.querySelectorAll("[data-filter]")];
 
 let entries = loadEntries();
 let activeFilter = "all";
+let authConfig = loadAuthConfig();
 
 date.valueAsDate = new Date();
+initSecurity();
 render();
+
+unlockButton.addEventListener("click", handlePinSubmit);
+
+pinInput.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    handlePinSubmit();
+  }
+});
+
+generatePinButton.addEventListener("click", () => {
+  const generatedPin = generatePin();
+  pinInput.type = "text";
+  pinInput.value = generatedPin;
+  setLockMessage("PIN gerado. Anote em local seguro antes de continuar.");
+});
+
+biometricButton.addEventListener("click", handleBiometric);
+
+lockButton.addEventListener("click", () => {
+  sessionStorage.removeItem(sessionKey);
+  lockApp();
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && authConfig) {
+    sessionStorage.removeItem(sessionKey);
+    lockApp();
+  }
+});
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -75,42 +116,201 @@ exportButton.addEventListener("click", () => {
   URL.revokeObjectURL(link.href);
 });
 
-seedButton.addEventListener("click", () => {
-  const today = new Date();
-  const future = new Date();
-  future.setDate(today.getDate() + 12);
-
-  entries.push(
-    {
-      id: crypto.randomUUID(),
-      description: "Comissao recebida",
-      amount: 3500,
-      date: toInputDate(today),
-      status: "received",
-      note: "Exemplo",
-      updatedAt: new Date().toISOString()
-    },
-    {
-      id: crypto.randomUUID(),
-      description: "Pagamento previsto",
-      amount: 2200,
-      date: toInputDate(future),
-      status: "future",
-      note: "Exemplo",
-      updatedAt: new Date().toISOString()
-    }
-  );
-
-  saveEntries();
-  render();
-});
-
 function loadEntries() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || [];
   } catch {
     return [];
   }
+}
+
+function loadAuthConfig() {
+  try {
+    return JSON.parse(localStorage.getItem(authKey));
+  } catch {
+    return null;
+  }
+}
+
+function saveAuthConfig(config) {
+  authConfig = config;
+  localStorage.setItem(authKey, JSON.stringify(config));
+}
+
+async function initSecurity() {
+  const isUnlocked = sessionStorage.getItem(sessionKey) === "yes";
+  if (authConfig && isUnlocked) {
+    unlockApp();
+    return;
+  }
+
+  lockApp();
+  updateLockMode();
+}
+
+function updateLockMode() {
+  const hasPin = Boolean(authConfig?.pinHash);
+  lockTitle.textContent = hasPin ? "Desbloquear Fluxo" : "Proteger Fluxo";
+  lockCopy.textContent = hasPin
+    ? "Digite seu PIN para ver seus valores."
+    : "Crie um PIN para impedir que outras pessoas vejam seus valores neste aparelho.";
+  unlockButton.textContent = hasPin ? "Desbloquear" : "Criar PIN";
+  generatePinButton.hidden = hasPin;
+  biometricButton.hidden = !authConfig?.credentialId;
+  pinInput.value = "";
+  pinInput.type = "password";
+  pinInput.focus();
+}
+
+async function handlePinSubmit() {
+  const pin = pinInput.value.trim();
+  if (pin.length < 6) {
+    setLockMessage("Use um PIN com pelo menos 6 numeros.");
+    return;
+  }
+
+  if (!authConfig?.pinHash) {
+    const salt = randomBase64(18);
+    const pinHash = await hashPin(pin, salt);
+    saveAuthConfig({ pinHash, salt, credentialId: null, createdAt: new Date().toISOString() });
+    sessionStorage.setItem(sessionKey, "yes");
+    unlockApp();
+    setTimeout(offerBiometricSetup, 350);
+    return;
+  }
+
+  const pinHash = await hashPin(pin, authConfig.salt);
+  if (pinHash !== authConfig.pinHash) {
+    setLockMessage("PIN incorreto.");
+    pinInput.select();
+    return;
+  }
+
+  sessionStorage.setItem(sessionKey, "yes");
+  unlockApp();
+}
+
+async function offerBiometricSetup() {
+  if (!(await canUseBiometric()) || authConfig?.credentialId) return;
+
+  const shouldSetup = confirm("Quer ativar Face ID/Touch ID neste aparelho?");
+  if (!shouldSetup) return;
+
+  await registerBiometric();
+}
+
+async function handleBiometric() {
+  if (!authConfig?.credentialId) {
+    await registerBiometric();
+    return;
+  }
+
+  try {
+    await navigator.credentials.get({
+      publicKey: {
+        challenge: randomBytes(32),
+        allowCredentials: [{ id: base64ToBytes(authConfig.credentialId), type: "public-key" }],
+        userVerification: "required",
+        timeout: 60000
+      }
+    });
+    sessionStorage.setItem(sessionKey, "yes");
+    unlockApp();
+  } catch {
+    setLockMessage("Nao foi possivel desbloquear com Face ID/Touch ID.");
+  }
+}
+
+async function registerBiometric() {
+  if (!(await canUseBiometric())) {
+    setLockMessage("Face ID/Touch ID nao esta disponivel neste navegador.");
+    return;
+  }
+
+  try {
+    const credential = await navigator.credentials.create({
+      publicKey: {
+        challenge: randomBytes(32),
+        rp: { name: "Fluxo Financeiro" },
+        user: {
+          id: randomBytes(16),
+          name: "fluxo-local",
+          displayName: "Fluxo local"
+        },
+        pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+        authenticatorSelection: {
+          authenticatorAttachment: "platform",
+          userVerification: "required"
+        },
+        timeout: 60000,
+        attestation: "none"
+      }
+    });
+
+    saveAuthConfig({ ...authConfig, credentialId: bytesToBase64(new Uint8Array(credential.rawId)) });
+    biometricButton.hidden = false;
+    setLockMessage("Face ID/Touch ID ativado neste aparelho.");
+  } catch {
+    setLockMessage("Face ID/Touch ID nao foi ativado.");
+  }
+}
+
+async function canUseBiometric() {
+  return Boolean(
+    window.PublicKeyCredential &&
+    navigator.credentials &&
+    await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()
+  );
+}
+
+function lockApp() {
+  document.body.classList.add("locked");
+  lockScreen.removeAttribute("aria-hidden");
+  if (authConfig) updateLockMode();
+}
+
+function unlockApp() {
+  document.body.classList.remove("locked");
+  lockScreen.setAttribute("aria-hidden", "true");
+  setLockMessage("");
+}
+
+async function hashPin(pin, salt) {
+  const data = new TextEncoder().encode(`${salt}:${pin}`);
+  const hash = await crypto.subtle.digest("SHA-256", data);
+  return bytesToBase64(new Uint8Array(hash));
+}
+
+function generatePin() {
+  const bytes = randomBytes(6);
+  return [...bytes].map((byte) => String(byte % 10)).join("");
+}
+
+function randomBytes(length) {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+function randomBase64(length) {
+  return bytesToBase64(randomBytes(length));
+}
+
+function bytesToBase64(bytes) {
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+}
+
+function base64ToBytes(value) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
+function setLockMessage(message) {
+  lockMessage.textContent = message;
 }
 
 function saveEntries() {

@@ -18,6 +18,8 @@ Primeira versao simples para registrar dinheiro que ja entrou e entradas futuras
 - Exclusao de entradas.
 - Exportacao CSV.
 - Dados salvos localmente no navegador.
+- Bloqueio local por PIN.
+- Opcao de Face ID/Touch ID quando o navegador/aparelho oferecer suporte.
 
 ## Limites desta versao
 
@@ -25,6 +27,7 @@ Primeira versao simples para registrar dinheiro que ja entrou e entradas futuras
 - Nao tem login.
 - Nao conecta banco, Open Finance ou planilha.
 - Nao publica na App Store.
+- Login por e-mail e recuperacao de senha exigem backend de autenticacao, como Firebase ou Supabase.
 
 ## Proximas melhorias recomendadas
 
