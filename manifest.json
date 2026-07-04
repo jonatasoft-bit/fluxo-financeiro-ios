@@ -1,0 +1,9 @@
+{
+  "name": "Fluxo Financeiro",
+  "short_name": "Fluxo",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f7f5ef",
+  "theme_color": "#f7f5ef",
+  "icons": []
+}

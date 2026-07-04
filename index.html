@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f7f5ef">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Fluxo">
+    <title>Fluxo Financeiro</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Financas</p>
+          <h1>Fluxo</h1>
+        </div>
+        <button class="icon-button" id="seedButton" type="button" aria-label="Adicionar exemplo" title="Adicionar exemplo">
+          <span aria-hidden="true">+</span>
+        </button>
+      </header>
+
+      <section class="summary-grid" aria-label="Resumo financeiro">
+        <article class="metric metric-primary">
+          <span>Recebido no mes</span>
+          <strong id="receivedMonth">R$ 0,00</strong>
+        </article>
+        <article class="metric">
+          <span>A receber</span>
+          <strong id="futureTotal">R$ 0,00</strong>
+        </article>
+        <article class="metric">
+          <span>Proximos 30 dias</span>
+          <strong id="next30">R$ 0,00</strong>
+        </article>
+      </section>
+
+      <section class="entry-panel" aria-label="Nova entrada">
+        <div class="section-heading">
+          <h2>Nova entrada</h2>
+          <span id="editingBadge" hidden>Editando</span>
+        </div>
+
+        <form id="entryForm">
+          <input type="hidden" id="entryId">
+
+          <label>
+            Nome
+            <input id="description" name="description" type="text" autocomplete="off" placeholder="Ex.: Comissao, aluguel, venda" required>
+          </label>
+
+          <div class="form-row">
+            <label>
+              Valor
+              <input id="amount" name="amount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" required>
+            </label>
+            <label>
+              Data
+              <input id="date" name="date" type="date" required>
+            </label>
+          </div>
+
+          <fieldset class="segmented" aria-label="Status da entrada">
+            <label>
+              <input type="radio" name="status" value="received" checked>
+              <span>Entrou</span>
+            </label>
+            <label>
+              <input type="radio" name="status" value="future">
+              <span>Vai entrar</span>
+            </label>
+          </fieldset>
+
+          <label>
+            Observacao
+            <input id="note" name="note" type="text" autocomplete="off" placeholder="Opcional">
+          </label>
+
+          <div class="actions">
+            <button class="secondary-button" id="cancelEdit" type="button" hidden>Cancelar</button>
+            <button class="primary-button" type="submit">Salvar entrada</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="list-panel" aria-label="Entradas cadastradas">
+        <div class="section-heading">
+          <h2>Entradas</h2>
+          <button class="text-button" id="exportButton" type="button">Exportar</button>
+        </div>
+
+        <div class="filter-tabs" role="tablist" aria-label="Filtros">
+          <button class="active" type="button" data-filter="all">Todas</button>
+          <button type="button" data-filter="received">Entrou</button>
+          <button type="button" data-filter="future">Futuras</button>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+          <strong>Nenhuma entrada ainda</strong>
+          <p>Cadastre o primeiro dinheiro que entrou ou que voce espera receber.</p>
+        </div>
+
+        <ul class="entry-list" id="entryList"></ul>
+      </section>
+    </main>
+
+    <template id="entryTemplate">
+      <li class="entry-item">
+        <button class="entry-main" type="button">
+          <span class="entry-title"></span>
+          <span class="entry-meta"></span>
+        </button>
+        <div class="entry-side">
+          <strong class="entry-value"></strong>
+          <button class="delete-button" type="button" aria-label="Excluir" title="Excluir">x</button>
+        </div>
+      </li>
+    </template>
+
+    <script src="app.js"></script>
+  </body>
+</html>
