@@ -13,10 +13,13 @@ Primeira versao simples para registrar dinheiro que ja entrou e entradas futuras
 - Cadastro de entrada com nome, valor, data, status e observacao.
 - Status "Entrou" e "Vai entrar".
 - Resumo de recebido no mes, total a receber e proximos 30 dias.
+- Cadastro de saidas com contas mensais, contas parceladas e gastos diarios.
+- Status de saida "Paga" e "Pendente".
+- Resumo de saidas pagas no mes e saldo previsto.
 - Lista com filtros.
 - Edicao ao tocar em uma entrada.
 - Exclusao de entradas.
-- Exportacao CSV.
+- Exportacao CSV de entradas e saidas.
 - Dados salvos localmente no navegador.
 - Bloqueio local por PIN.
 - Opcao de Face ID/Touch ID quando o navegador/aparelho oferecer suporte.
@@ -35,4 +38,5 @@ Primeira versao simples para registrar dinheiro que ja entrou e entradas futuras
 2. Recorrencia mensal.
 3. Notificacao de recebimento futuro.
 4. Backup em iCloud, Supabase ou planilha.
-5. Tela de despesas e saldo previsto.
+5. Geracao automatica de parcelas futuras.
+6. Relatorio por categoria.

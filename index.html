@@ -61,6 +61,14 @@
           <span>Proximos 30 dias</span>
           <strong id="next30">R$ 0,00</strong>
         </article>
+        <article class="metric metric-expense">
+          <span>Saiu no mes</span>
+          <strong id="spentMonth">R$ 0,00</strong>
+        </article>
+        <article class="metric metric-balance">
+          <span>Saldo previsto</span>
+          <strong id="plannedBalance">R$ 0,00</strong>
+        </article>
       </section>
 
       <section class="entry-panel" aria-label="Nova entrada">
@@ -130,10 +138,120 @@
 
         <ul class="entry-list" id="entryList"></ul>
       </section>
+
+      <section class="entry-panel" aria-label="Nova saida">
+        <div class="section-heading">
+          <h2>Nova saida</h2>
+          <span id="expenseEditingBadge" hidden>Editando</span>
+        </div>
+
+        <form id="expenseForm">
+          <input type="hidden" id="expenseId">
+
+          <label>
+            Nome
+            <input id="expenseDescription" name="expenseDescription" type="text" autocomplete="off" placeholder="Ex.: Aluguel, mercado, parcela" required>
+          </label>
+
+          <div class="form-row">
+            <label>
+              Valor
+              <input id="expenseAmount" name="expenseAmount" type="number" min="0" step="0.01" inputmode="decimal" placeholder="0,00" required>
+            </label>
+            <label>
+              Data
+              <input id="expenseDate" name="expenseDate" type="date" required>
+            </label>
+          </div>
+
+          <fieldset class="segmented segmented-three" aria-label="Tipo de saida">
+            <label>
+              <input type="radio" name="expenseType" value="monthly" checked>
+              <span>Mensal</span>
+            </label>
+            <label>
+              <input type="radio" name="expenseType" value="extra">
+              <span>Parcelada</span>
+            </label>
+            <label>
+              <input type="radio" name="expenseType" value="daily">
+              <span>Diaria</span>
+            </label>
+          </fieldset>
+
+          <div class="installment-fields" id="installmentFields" hidden>
+            <div class="form-row">
+              <label>
+                Parcela atual
+                <input id="installmentCurrent" name="installmentCurrent" type="number" min="1" step="1" inputmode="numeric" placeholder="1">
+              </label>
+              <label>
+                Total parcelas
+                <input id="installmentTotal" name="installmentTotal" type="number" min="1" step="1" inputmode="numeric" placeholder="12">
+              </label>
+            </div>
+          </div>
+
+          <fieldset class="segmented" aria-label="Status da saida">
+            <label>
+              <input type="radio" name="expenseStatus" value="paid" checked>
+              <span>Paga</span>
+            </label>
+            <label>
+              <input type="radio" name="expenseStatus" value="pending">
+              <span>Pendente</span>
+            </label>
+          </fieldset>
+
+          <label>
+            Observacao
+            <input id="expenseNote" name="expenseNote" type="text" autocomplete="off" placeholder="Opcional">
+          </label>
+
+          <div class="actions">
+            <button class="secondary-button" id="cancelExpenseEdit" type="button" hidden>Cancelar</button>
+            <button class="primary-button danger-primary" type="submit">Salvar saida</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="list-panel" aria-label="Saidas cadastradas">
+        <div class="section-heading">
+          <h2>Saidas</h2>
+          <button class="text-button" id="exportExpensesButton" type="button">Exportar</button>
+        </div>
+
+        <div class="filter-tabs expense-tabs" role="tablist" aria-label="Filtros de saidas">
+          <button class="active" type="button" data-expense-filter="all">Todas</button>
+          <button type="button" data-expense-filter="monthly">Mensais</button>
+          <button type="button" data-expense-filter="extra">Parceladas</button>
+          <button type="button" data-expense-filter="daily">Diarias</button>
+        </div>
+
+        <div class="empty-state" id="expenseEmptyState">
+          <strong>Nenhuma saida ainda</strong>
+          <p>Cadastre contas mensais, parceladas ou gastos diarios.</p>
+        </div>
+
+        <ul class="entry-list" id="expenseList"></ul>
+      </section>
     </main>
 
     <template id="entryTemplate">
       <li class="entry-item">
+        <button class="entry-main" type="button">
+          <span class="entry-title"></span>
+          <span class="entry-meta"></span>
+        </button>
+        <div class="entry-side">
+          <strong class="entry-value"></strong>
+          <button class="delete-button" type="button" aria-label="Excluir" title="Excluir">x</button>
+        </div>
+      </li>
+    </template>
+
+    <template id="expenseTemplate">
+      <li class="entry-item expense-item">
         <button class="entry-main" type="button">
           <span class="entry-title"></span>
           <span class="entry-meta"></span>

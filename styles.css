@@ -171,6 +171,16 @@ body:not(.locked) .lock-screen {
   border-color: #b7dccb;
 }
 
+.metric-expense {
+  background: #fff6f2;
+  border-color: #f0c6b5;
+}
+
+.metric-balance {
+  background: #f4f7ff;
+  border-color: #c8d5f4;
+}
+
 .metric span,
 label {
   color: var(--muted);
@@ -253,6 +263,10 @@ button:focus-visible {
   background: #f2f4f0;
 }
 
+.segmented-three {
+  grid-template-columns: repeat(3, 1fr);
+}
+
 .segmented label {
   display: block;
 }
@@ -299,6 +313,11 @@ button:focus-visible {
   color: #ffffff;
 }
 
+.danger-primary {
+  background: var(--danger);
+  border-color: var(--danger);
+}
+
 .secondary-button,
 .text-button,
 .filter-tabs button {
@@ -318,10 +337,20 @@ button:focus-visible {
   margin-bottom: 12px;
 }
 
+.expense-tabs {
+  grid-template-columns: repeat(4, 1fr);
+}
+
 .filter-tabs button.active {
   background: #e9f2ed;
   border-color: #a8d3be;
   color: var(--accent-dark);
+}
+
+.expense-tabs button.active {
+  background: #fff1ed;
+  border-color: #e9b5a5;
+  color: var(--danger);
 }
 
 .empty-state {
@@ -395,6 +424,14 @@ button:focus-visible {
   color: var(--warning);
 }
 
+.expense-item .entry-value {
+  color: var(--danger);
+}
+
+.expense-item.pending .entry-value {
+  color: var(--warning);
+}
+
 .delete-button {
   width: 34px;
   height: 34px;
@@ -407,7 +444,7 @@ button:focus-visible {
 
 @media (min-width: 680px) {
   .summary-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(5, 1fr);
   }
 
   .metric {
@@ -424,7 +461,9 @@ button:focus-visible {
 
   .form-row,
   .actions,
-  .lock-actions {
+  .lock-actions,
+  .segmented-three,
+  .expense-tabs {
     grid-template-columns: 1fr;
   }
 

@@ -1,4 +1,5 @@
 const storageKey = "fluxo-financeiro-entradas-v1";
+const expenseStorageKey = "fluxo-financeiro-saidas-v1";
 const authKey = "fluxo-financeiro-auth-v1";
 const sessionKey = "fluxo-financeiro-unlocked";
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -26,12 +27,32 @@ const cancelEdit = document.querySelector("#cancelEdit");
 const editingBadge = document.querySelector("#editingBadge");
 const exportButton = document.querySelector("#exportButton");
 const filterButtons = [...document.querySelectorAll("[data-filter]")];
+const expenseForm = document.querySelector("#expenseForm");
+const expenseId = document.querySelector("#expenseId");
+const expenseDescription = document.querySelector("#expenseDescription");
+const expenseAmount = document.querySelector("#expenseAmount");
+const expenseDate = document.querySelector("#expenseDate");
+const expenseNote = document.querySelector("#expenseNote");
+const expenseList = document.querySelector("#expenseList");
+const expenseEmptyState = document.querySelector("#expenseEmptyState");
+const expenseTemplate = document.querySelector("#expenseTemplate");
+const expenseEditingBadge = document.querySelector("#expenseEditingBadge");
+const cancelExpenseEdit = document.querySelector("#cancelExpenseEdit");
+const exportExpensesButton = document.querySelector("#exportExpensesButton");
+const expenseFilterButtons = [...document.querySelectorAll("[data-expense-filter]")];
+const installmentFields = document.querySelector("#installmentFields");
+const installmentCurrent = document.querySelector("#installmentCurrent");
+const installmentTotal = document.querySelector("#installmentTotal");
+const expenseTypeInputs = [...document.querySelectorAll('[name="expenseType"]')];
 
 let entries = loadEntries();
+let expenses = loadExpenses();
 let activeFilter = "all";
+let activeExpenseFilter = "all";
 let authConfig = loadAuthConfig();
 
 date.valueAsDate = new Date();
+expenseDate.valueAsDate = new Date();
 initSecurity();
 render();
 
@@ -116,9 +137,77 @@ exportButton.addEventListener("click", () => {
   URL.revokeObjectURL(link.href);
 });
 
+expenseForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+
+  const formData = new FormData(expenseForm);
+  const value = Number(expenseAmount.value);
+  const type = formData.get("expenseType");
+
+  if (!expenseDescription.value.trim() || Number.isNaN(value) || value <= 0 || !expenseDate.value) {
+    return;
+  }
+
+  const payload = {
+    id: expenseId.value || crypto.randomUUID(),
+    description: expenseDescription.value.trim(),
+    amount: value,
+    date: expenseDate.value,
+    type,
+    status: formData.get("expenseStatus"),
+    installmentCurrent: type === "extra" ? Number(installmentCurrent.value || 1) : null,
+    installmentTotal: type === "extra" ? Number(installmentTotal.value || 1) : null,
+    note: expenseNote.value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const index = expenses.findIndex((expense) => expense.id === payload.id);
+  if (index >= 0) {
+    expenses[index] = payload;
+  } else {
+    expenses.push(payload);
+  }
+
+  saveExpenses();
+  resetExpenseForm();
+  render();
+});
+
+cancelExpenseEdit.addEventListener("click", resetExpenseForm);
+
+expenseFilterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    activeExpenseFilter = button.dataset.expenseFilter;
+    expenseFilterButtons.forEach((item) => item.classList.toggle("active", item === button));
+    renderExpenseList();
+  });
+});
+
+expenseTypeInputs.forEach((input) => {
+  input.addEventListener("change", updateInstallmentVisibility);
+});
+
+exportExpensesButton.addEventListener("click", () => {
+  const csv = expensesToCsv(expenses);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "saidas-financeiras.csv";
+  link.click();
+  URL.revokeObjectURL(link.href);
+});
+
 function loadEntries() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function loadExpenses() {
+  try {
+    return JSON.parse(localStorage.getItem(expenseStorageKey)) || [];
   } catch {
     return [];
   }
@@ -317,9 +406,14 @@ function saveEntries() {
   localStorage.setItem(storageKey, JSON.stringify(entries));
 }
 
+function saveExpenses() {
+  localStorage.setItem(expenseStorageKey, JSON.stringify(expenses));
+}
+
 function render() {
   renderSummary();
   renderList();
+  renderExpenseList();
 }
 
 function renderSummary() {
@@ -347,9 +441,27 @@ function renderSummary() {
     })
     .reduce(sumAmounts, 0);
 
+  const spentMonth = expenses
+    .filter((expense) => {
+      const expenseDateValue = fromInputDate(expense.date);
+      return expense.status === "paid" && expenseDateValue.getMonth() === month && expenseDateValue.getFullYear() === year;
+    })
+    .reduce(sumAmounts, 0);
+
+  const expensesThisMonth = expenses
+    .filter((expense) => {
+      const expenseDateValue = fromInputDate(expense.date);
+      return expenseDateValue.getMonth() === month && expenseDateValue.getFullYear() === year;
+    })
+    .reduce(sumAmounts, 0);
+
+  const plannedBalance = receivedMonth + futureTotal - expensesThisMonth;
+
   document.querySelector("#receivedMonth").textContent = money.format(receivedMonth);
   document.querySelector("#futureTotal").textContent = money.format(futureTotal);
   document.querySelector("#next30").textContent = money.format(next30);
+  document.querySelector("#spentMonth").textContent = money.format(spentMonth);
+  document.querySelector("#plannedBalance").textContent = money.format(plannedBalance);
 }
 
 function renderList() {
@@ -374,10 +486,48 @@ function renderList() {
   });
 }
 
+function renderExpenseList() {
+  expenseList.innerHTML = "";
+
+  const visibleExpenses = expenses
+    .filter((expense) => activeExpenseFilter === "all" || expense.type === activeExpenseFilter)
+    .sort((a, b) => a.date.localeCompare(b.date));
+
+  expenseEmptyState.hidden = visibleExpenses.length > 0;
+
+  visibleExpenses.forEach((expense) => {
+    const node = expenseTemplate.content.firstElementChild.cloneNode(true);
+    node.classList.toggle("pending", expense.status === "pending");
+    node.querySelector(".entry-title").textContent = expense.description;
+    node.querySelector(".entry-meta").textContent = buildExpenseMeta(expense);
+    node.querySelector(".entry-value").textContent = money.format(expense.amount);
+
+    node.querySelector(".entry-main").addEventListener("click", () => editExpense(expense.id));
+    node.querySelector(".delete-button").addEventListener("click", () => deleteExpense(expense.id));
+    expenseList.appendChild(node);
+  });
+}
+
 function buildMeta(entry) {
   const status = entry.status === "received" ? "Entrou" : "Vai entrar";
   const formattedDate = dateFormatter.format(fromInputDate(entry.date));
   return entry.note ? `${status} em ${formattedDate} · ${entry.note}` : `${status} em ${formattedDate}`;
+}
+
+function buildExpenseMeta(expense) {
+  const typeLabels = {
+    monthly: "Mensal",
+    extra: "Parcelada",
+    daily: "Diaria"
+  };
+  const status = expense.status === "paid" ? "Paga" : "Pendente";
+  const formattedDate = dateFormatter.format(fromInputDate(expense.date));
+  const installment = expense.type === "extra"
+    ? ` · ${expense.installmentCurrent || 1}/${expense.installmentTotal || 1}`
+    : "";
+  const note = expense.note ? ` · ${expense.note}` : "";
+
+  return `${typeLabels[expense.type]}${installment} · ${status} em ${formattedDate}${note}`;
 }
 
 function editEntry(id) {
@@ -395,10 +545,36 @@ function editEntry(id) {
   description.focus();
 }
 
+function editExpense(id) {
+  const expense = expenses.find((item) => item.id === id);
+  if (!expense) return;
+
+  expenseId.value = expense.id;
+  expenseDescription.value = expense.description;
+  expenseAmount.value = expense.amount;
+  expenseDate.value = expense.date;
+  expenseNote.value = expense.note || "";
+  expenseForm.querySelector(`[name="expenseType"][value="${expense.type}"]`).checked = true;
+  expenseForm.querySelector(`[name="expenseStatus"][value="${expense.status}"]`).checked = true;
+  installmentCurrent.value = expense.installmentCurrent || "";
+  installmentTotal.value = expense.installmentTotal || "";
+  updateInstallmentVisibility();
+  cancelExpenseEdit.hidden = false;
+  expenseEditingBadge.hidden = false;
+  expenseDescription.focus();
+}
+
 function deleteEntry(id) {
   entries = entries.filter((entry) => entry.id !== id);
   saveEntries();
   if (entryId.value === id) resetForm();
+  render();
+}
+
+function deleteExpense(id) {
+  expenses = expenses.filter((expense) => expense.id !== id);
+  saveExpenses();
+  if (expenseId.value === id) resetExpenseForm();
   render();
 }
 
@@ -410,8 +586,42 @@ function resetForm() {
   editingBadge.hidden = true;
 }
 
+function resetExpenseForm() {
+  expenseForm.reset();
+  expenseId.value = "";
+  expenseDate.valueAsDate = new Date();
+  installmentCurrent.value = "";
+  installmentTotal.value = "";
+  updateInstallmentVisibility();
+  cancelExpenseEdit.hidden = true;
+  expenseEditingBadge.hidden = true;
+}
+
+function updateInstallmentVisibility() {
+  const selectedType = new FormData(expenseForm).get("expenseType");
+  installmentFields.hidden = selectedType !== "extra";
+}
+
 function sumAmounts(total, entry) {
   return total + Number(entry.amount);
+}
+
+function expensesToCsv(rows) {
+  const header = ["descricao", "valor", "data", "tipo", "status", "parcela_atual", "total_parcelas", "observacao"];
+  const body = rows.map((expense) => [
+    expense.description,
+    expense.amount,
+    expense.date,
+    expense.type,
+    expense.status === "paid" ? "paga" : "pendente",
+    expense.installmentCurrent || "",
+    expense.installmentTotal || "",
+    expense.note || ""
+  ]);
+
+  return [header, ...body]
+    .map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(","))
+    .join("\n");
 }
 
 function toCsv(rows) {
