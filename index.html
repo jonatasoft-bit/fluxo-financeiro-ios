@@ -71,6 +71,47 @@
         </article>
       </section>
 
+      <section class="dashboard-panel" aria-label="Dashboard de gastos">
+        <div class="section-heading">
+          <h2>Dashboard</h2>
+          <span id="dashboardMonth">Mes atual</span>
+        </div>
+
+        <div class="dashboard-grid">
+          <article class="dashboard-card">
+            <span>Total de gastos</span>
+            <strong id="dashboardSpent">R$ 0,00</strong>
+          </article>
+          <article class="dashboard-card">
+            <span>Maior categoria</span>
+            <strong id="topCategory">Sem dados</strong>
+          </article>
+          <article class="dashboard-card">
+            <span>Pendencias</span>
+            <strong id="pendingExpenses">R$ 0,00</strong>
+          </article>
+        </div>
+
+        <div class="chart-block">
+          <div class="section-heading compact-heading">
+            <h2>Onde o dinheiro saiu</h2>
+            <span id="categoryCount">0 categorias</span>
+          </div>
+          <div class="empty-state compact-empty" id="dashboardEmpty">
+            <strong>Sem gastos no mes</strong>
+            <p>Cadastre uma saida para ver o grafico.</p>
+          </div>
+          <div class="category-chart" id="categoryChart"></div>
+        </div>
+
+        <div class="chart-block">
+          <div class="section-heading compact-heading">
+            <h2>Pago x pendente</h2>
+          </div>
+          <div class="status-chart" id="statusChart"></div>
+        </div>
+      </section>
+
       <section class="entry-panel" aria-label="Nova entrada">
         <div class="section-heading">
           <h2>Nova entrada</h2>
@@ -163,6 +204,20 @@
               <input id="expenseDate" name="expenseDate" type="date" required>
             </label>
           </div>
+
+          <label>
+            Categoria
+            <select id="expenseCategory" name="expenseCategory" required>
+              <option value="mercado">Mercado</option>
+              <option value="casa">Casa</option>
+              <option value="gasolina">Gasolina</option>
+              <option value="alimentacao">Alimentacao</option>
+              <option value="saude">Saude</option>
+              <option value="lazer">Lazer</option>
+              <option value="transporte">Transporte</option>
+              <option value="extras">Extras</option>
+            </select>
+          </label>
 
           <fieldset class="segmented segmented-three" aria-label="Tipo de saida">
             <label>

@@ -14,8 +14,10 @@ Primeira versao simples para registrar dinheiro que ja entrou e entradas futuras
 - Status "Entrou" e "Vai entrar".
 - Resumo de recebido no mes, total a receber e proximos 30 dias.
 - Cadastro de saidas com contas mensais, contas parceladas e gastos diarios.
+- Categorias de gasto: mercado, casa, gasolina, alimentacao, saude, lazer, transporte e extras.
 - Status de saida "Paga" e "Pendente".
 - Resumo de saidas pagas no mes e saldo previsto.
+- Dashboard inicial com total de gastos, maior categoria, pendencias e graficos por categoria.
 - Lista com filtros.
 - Edicao ao tocar em uma entrada.
 - Exclusao de entradas.

@@ -4,6 +4,27 @@ const authKey = "fluxo-financeiro-auth-v1";
 const sessionKey = "fluxo-financeiro-unlocked";
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" });
+const monthFormatter = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric" });
+const categoryLabels = {
+  mercado: "Mercado",
+  casa: "Casa",
+  gasolina: "Gasolina",
+  alimentacao: "Alimentacao",
+  saude: "Saude",
+  lazer: "Lazer",
+  transporte: "Transporte",
+  extras: "Extras"
+};
+const categoryColors = {
+  mercado: "#1f7a54",
+  casa: "#3467c9",
+  gasolina: "#b15c22",
+  alimentacao: "#8a5bce",
+  saude: "#c14e6c",
+  lazer: "#0f8b8d",
+  transporte: "#6f7d1b",
+  extras: "#a33a38"
+};
 
 const lockScreen = document.querySelector("#lockScreen");
 const lockTitle = document.querySelector("#lockTitle");
@@ -32,6 +53,7 @@ const expenseId = document.querySelector("#expenseId");
 const expenseDescription = document.querySelector("#expenseDescription");
 const expenseAmount = document.querySelector("#expenseAmount");
 const expenseDate = document.querySelector("#expenseDate");
+const expenseCategory = document.querySelector("#expenseCategory");
 const expenseNote = document.querySelector("#expenseNote");
 const expenseList = document.querySelector("#expenseList");
 const expenseEmptyState = document.querySelector("#expenseEmptyState");
@@ -44,6 +66,14 @@ const installmentFields = document.querySelector("#installmentFields");
 const installmentCurrent = document.querySelector("#installmentCurrent");
 const installmentTotal = document.querySelector("#installmentTotal");
 const expenseTypeInputs = [...document.querySelectorAll('[name="expenseType"]')];
+const dashboardMonth = document.querySelector("#dashboardMonth");
+const dashboardSpent = document.querySelector("#dashboardSpent");
+const topCategory = document.querySelector("#topCategory");
+const pendingExpenses = document.querySelector("#pendingExpenses");
+const categoryCount = document.querySelector("#categoryCount");
+const dashboardEmpty = document.querySelector("#dashboardEmpty");
+const categoryChart = document.querySelector("#categoryChart");
+const statusChart = document.querySelector("#statusChart");
 
 let entries = loadEntries();
 let expenses = loadExpenses();
@@ -153,6 +183,7 @@ expenseForm.addEventListener("submit", (event) => {
     description: expenseDescription.value.trim(),
     amount: value,
     date: expenseDate.value,
+    category: formData.get("expenseCategory"),
     type,
     status: formData.get("expenseStatus"),
     installmentCurrent: type === "extra" ? Number(installmentCurrent.value || 1) : null,
@@ -412,6 +443,7 @@ function saveExpenses() {
 
 function render() {
   renderSummary();
+  renderDashboard();
   renderList();
   renderExpenseList();
 }
@@ -462,6 +494,59 @@ function renderSummary() {
   document.querySelector("#next30").textContent = money.format(next30);
   document.querySelector("#spentMonth").textContent = money.format(spentMonth);
   document.querySelector("#plannedBalance").textContent = money.format(plannedBalance);
+}
+
+function renderDashboard() {
+  const now = new Date();
+  const monthExpenses = expenses.filter((expense) => isSameMonth(expense.date, now));
+  const totalSpent = monthExpenses.reduce(sumAmounts, 0);
+  const paidTotal = monthExpenses
+    .filter((expense) => expense.status === "paid")
+    .reduce(sumAmounts, 0);
+  const pendingTotal = monthExpenses
+    .filter((expense) => expense.status === "pending")
+    .reduce(sumAmounts, 0);
+  const categoryTotals = getCategoryTotals(monthExpenses);
+  const sortedCategories = Object.entries(categoryTotals).sort((a, b) => b[1] - a[1]);
+  const top = sortedCategories[0];
+
+  dashboardMonth.textContent = capitalize(monthFormatter.format(now));
+  dashboardSpent.textContent = money.format(totalSpent);
+  pendingExpenses.textContent = money.format(pendingTotal);
+  topCategory.textContent = top ? `${categoryLabels[top[0]] || "Extras"} (${money.format(top[1])})` : "Sem dados";
+  categoryCount.textContent = `${sortedCategories.length} ${sortedCategories.length === 1 ? "categoria" : "categorias"}`;
+  dashboardEmpty.hidden = sortedCategories.length > 0;
+
+  categoryChart.innerHTML = "";
+  sortedCategories.forEach(([category, total]) => {
+    const percent = totalSpent > 0 ? Math.round((total / totalSpent) * 100) : 0;
+    const row = document.createElement("div");
+    row.className = "chart-row";
+    row.innerHTML = `
+      <div class="chart-row-top">
+        <span class="chart-label">${categoryLabels[category] || "Extras"}</span>
+        <span class="chart-value">${money.format(total)} · ${percent}%</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" style="width: ${percent}%; --bar-color: ${categoryColors[category] || categoryColors.extras}"></div>
+      </div>
+    `;
+    categoryChart.appendChild(row);
+  });
+
+  const paidShare = totalSpent > 0 ? (paidTotal / totalSpent) * 100 : 0;
+  const pendingShare = totalSpent > 0 ? (pendingTotal / totalSpent) * 100 : 0;
+  statusChart.innerHTML = `
+    <div class="status-track" style="--paid-share: ${paidShare}%; --pending-share: ${pendingShare}%">
+      <span class="status-paid" aria-label="Pago"></span>
+      <span class="status-pending" aria-label="Pendente"></span>
+      <span></span>
+    </div>
+    <div class="status-legend">
+      <span class="status-label" style="--dot-color: var(--accent)">Pago ${money.format(paidTotal)}</span>
+      <span class="status-label" style="--dot-color: var(--warning)">Pendente ${money.format(pendingTotal)}</span>
+    </div>
+  `;
 }
 
 function renderList() {
@@ -521,13 +606,14 @@ function buildExpenseMeta(expense) {
     daily: "Diaria"
   };
   const status = expense.status === "paid" ? "Paga" : "Pendente";
+  const category = categoryLabels[expense.category || "extras"] || "Extras";
   const formattedDate = dateFormatter.format(fromInputDate(expense.date));
   const installment = expense.type === "extra"
     ? ` · ${expense.installmentCurrent || 1}/${expense.installmentTotal || 1}`
     : "";
   const note = expense.note ? ` · ${expense.note}` : "";
 
-  return `${typeLabels[expense.type]}${installment} · ${status} em ${formattedDate}${note}`;
+  return `${category} · ${typeLabels[expense.type]}${installment} · ${status} em ${formattedDate}${note}`;
 }
 
 function editEntry(id) {
@@ -553,6 +639,7 @@ function editExpense(id) {
   expenseDescription.value = expense.description;
   expenseAmount.value = expense.amount;
   expenseDate.value = expense.date;
+  expenseCategory.value = expense.category || "extras";
   expenseNote.value = expense.note || "";
   expenseForm.querySelector(`[name="expenseType"][value="${expense.type}"]`).checked = true;
   expenseForm.querySelector(`[name="expenseStatus"][value="${expense.status}"]`).checked = true;
@@ -606,12 +693,21 @@ function sumAmounts(total, entry) {
   return total + Number(entry.amount);
 }
 
+function getCategoryTotals(rows) {
+  return rows.reduce((totals, expense) => {
+    const category = expense.category || "extras";
+    totals[category] = (totals[category] || 0) + Number(expense.amount);
+    return totals;
+  }, {});
+}
+
 function expensesToCsv(rows) {
-  const header = ["descricao", "valor", "data", "tipo", "status", "parcela_atual", "total_parcelas", "observacao"];
+  const header = ["descricao", "valor", "data", "categoria", "tipo", "status", "parcela_atual", "total_parcelas", "observacao"];
   const body = rows.map((expense) => [
     expense.description,
     expense.amount,
     expense.date,
+    categoryLabels[expense.category || "extras"] || "Extras",
     expense.type,
     expense.status === "paid" ? "paga" : "pendente",
     expense.installmentCurrent || "",
@@ -642,6 +738,15 @@ function toCsv(rows) {
 function fromInputDate(value) {
   const [year, month, day] = value.split("-").map(Number);
   return new Date(year, month - 1, day);
+}
+
+function isSameMonth(dateValue, compareDate) {
+  const dateToCheck = fromInputDate(dateValue);
+  return dateToCheck.getMonth() === compareDate.getMonth() && dateToCheck.getFullYear() === compareDate.getFullYear();
+}
+
+function capitalize(value) {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 function toInputDate(value) {
